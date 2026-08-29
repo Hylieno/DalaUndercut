@@ -1,0 +1,68 @@
+name: Publish release
+
+on:
+  push:
+    branches: [release]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore DalaLenoUndercut.csproj
+
+      - name: Build
+        run: dotnet build DalaLenoUndercut.csproj -c Release --no-restore
+
+      - name: Read version and package
+        id: package
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content DalaLenoUndercut.csproj
+          $version = [string]$project.Project.PropertyGroup.Version
+          if ([string]::IsNullOrWhiteSpace($version)) { throw 'Version not found in csproj.' }
+          $tagVersion = $version -replace '\.0$',''
+          $tag = "v$tagVersion"
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$tagVersion" >> $env:GITHUB_OUTPUT
+
+          $dll = Get-ChildItem -Path bin -Recurse -Filter DalaLenoUndercut.dll |
+            Where-Object { $_.FullName -match '[\\/]Release[\\/]' } |
+            Select-Object -First 1
+          if (-not $dll) { throw 'Built plugin DLL not found.' }
+
+          $outputDir = $dll.Directory.FullName
+          $zip = Join-Path $PWD "DalaLenoUndercut-$tag.zip"
+          Compress-Archive -Path (Join-Path $outputDir '*') -DestinationPath $zip -Force
+          "zip=$zip" >> $env:GITHUB_OUTPUT
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.package.outputs.tag }}
+          VERSION: ${{ steps.package.outputs.version }}
+          ZIP: ${{ steps.package.outputs.zip }}
+        run: |
+          gh release view $env:TAG 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $env:TAG already exists; nothing to publish."
+            exit 0
+          }
+
+          gh release create $env:TAG $env:ZIP `
+            --target $env:GITHUB_SHA `
+            --title "DalaLeno Undercut $env:TAG" `
+            --generate-notes
