@@ -1,12 +1,13 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>0.3.5.0</Version>
+    <Version>0.3.5.1</Version>
     <TargetFramework>net10.0-windows7.0</TargetFramework>
     <Author>DalaLeno</Author>
     <Name>DalaLeno Undercut</Name>
     <Punchline>Live automatic retainer undercut helper.</Punchline>
     <Description>Automatically walks a retainer's market listings, reads live FFXIV market-board data, quality-matches HQ/NQ, and reprices safely with configurable pacing.</Description>
     <Tags>market;retainer;undercut</Tags>
+    <IconUrl>https://raw.githubusercontent.com/Hylieno/DalaLeno/main/plugins/DalaUndercut/icon.png</IconUrl>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
