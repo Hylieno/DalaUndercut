@@ -20,6 +20,17 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Download Dalamud
+        shell: pwsh
+        run: |
+          $dalamudUrl = "https://goatcorp.github.io/dalamud-distrib/latest.zip"
+          $dalamudDir = "$env:AppData\XIVLauncher\addon\Hooks\dev"
+          New-Item -ItemType Directory -Force -Path $dalamudDir | Out-Null
+          Invoke-WebRequest -Uri $dalamudUrl -OutFile dalamud.zip
+          Expand-Archive -Path dalamud.zip -DestinationPath $dalamudDir -Force
+          Remove-Item dalamud.zip
+          "DALAMUD_HOME=$dalamudDir" >> $env:GITHUB_ENV
+
       - name: Restore
         run: dotnet restore DalaLenoUndercut.csproj
 
@@ -38,14 +49,23 @@ jobs:
           "tag=$tag" >> $env:GITHUB_OUTPUT
           "version=$tagVersion" >> $env:GITHUB_OUTPUT
 
-          $dll = Get-ChildItem -Path bin -Recurse -Filter DalaLenoUndercut.dll |
+          $packagedZip = Get-ChildItem -Path bin -Recurse -Filter latest.zip |
             Where-Object { $_.FullName -match '[\\/]Release[\\/]' } |
             Select-Object -First 1
-          if (-not $dll) { throw 'Built plugin DLL not found.' }
 
-          $outputDir = $dll.Directory.FullName
-          $zip = Join-Path $PWD "DalaLenoUndercut-$tag.zip"
-          Compress-Archive -Path (Join-Path $outputDir '*') -DestinationPath $zip -Force
+          if ($packagedZip) {
+            $zip = Join-Path $PWD "DalaLenoUndercut-$tag.zip"
+            Copy-Item $packagedZip.FullName $zip -Force
+          }
+          else {
+            $dll = Get-ChildItem -Path bin -Recurse -Filter DalaLenoUndercut.dll |
+              Where-Object { $_.FullName -match '[\\/]Release[\\/]' } |
+              Select-Object -First 1
+            if (-not $dll) { throw 'Built plugin output not found.' }
+            $zip = Join-Path $PWD "DalaLenoUndercut-$tag.zip"
+            Compress-Archive -Path (Join-Path $dll.Directory.FullName '*') -DestinationPath $zip -Force
+          }
+
           "zip=$zip" >> $env:GITHUB_OUTPUT
 
       - name: Publish GitHub Release
@@ -53,7 +73,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.package.outputs.tag }}
-          VERSION: ${{ steps.package.outputs.version }}
           ZIP: ${{ steps.package.outputs.zip }}
         run: |
           gh release view $env:TAG 2>$null
