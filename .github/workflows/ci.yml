@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, release]
+  pull_request:
+    branches: [dev, release]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore DalaLenoUndercut.csproj
+
+      - name: Build
+        run: dotnet build DalaLenoUndercut.csproj -c Release --no-restore
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DalaLenoUndercut-${{ github.sha }}
+          path: |
+            bin/Release/**
+          if-no-files-found: error
