@@ -25,7 +25,7 @@ jobs:
         shell: pwsh
         run: |
           $dalamudUrl = "https://goatcorp.github.io/dalamud-distrib/latest.zip"
-          $dalamudDir = "$env:AppData\\XIVLauncher\\addon\\Hooks\\dev"
+          $dalamudDir = "$env:AppData\XIVLauncher\addon\Hooks\dev"
           New-Item -ItemType Directory -Force -Path $dalamudDir | Out-Null
           Invoke-WebRequest -Uri $dalamudUrl -OutFile dalamud.zip
           Expand-Archive -Path dalamud.zip -DestinationPath $dalamudDir -Force
@@ -45,12 +45,12 @@ jobs:
           [xml]$project = Get-Content DalaLenoUndercut.csproj
           $version = [string]$project.Project.PropertyGroup.Version
           if ([string]::IsNullOrWhiteSpace($version)) { throw 'Version not found in csproj.' }
-          $tagVersion = $version -replace '\\.0$',''
+          $tagVersion = $version -replace '\.0$',''
           $tag = "v$tagVersion"
           "tag=$tag" >> $env:GITHUB_OUTPUT
 
           $packagedZip = Get-ChildItem -Path bin -Recurse -Filter latest.zip |
-            Where-Object { $_.FullName -match '[\\\\/]Release[\\\\/]' } |
+            Where-Object { $_.FullName -match '[\\/]Release[\\/]' } |
             Select-Object -First 1
 
           if ($packagedZip) {
@@ -59,7 +59,7 @@ jobs:
           }
           else {
             $dll = Get-ChildItem -Path bin -Recurse -Filter DalaLenoUndercut.dll |
-              Where-Object { $_.FullName -match '[\\\\/]Release[\\\\/]' } |
+              Where-Object { $_.FullName -match '[\\/]Release[\\/]' } |
               Select-Object -First 1
             if (-not $dll) { throw 'Built plugin output not found.' }
             $versionZip = Join-Path $PWD "DalaLenoUndercut-$tag.zip"
