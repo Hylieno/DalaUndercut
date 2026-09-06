@@ -1,4 +1,4 @@
-name: Promote dev to release
+name: Promote dev to main
 
 on:
   workflow_dispatch:
@@ -21,14 +21,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          existing=$(gh pr list --base release --head dev --state open --json number --jq '.[0].number')
+          existing=$(gh pr list --base main --head dev --state open --json number --jq '.[0].number')
           if [ -n "$existing" ]; then
             echo "Promotion PR already exists: #$existing"
             exit 0
           fi
 
           gh pr create \
-            --base release \
+            --base main \
             --head dev \
-            --title "Promote dev to release" \
-            --body "Promote the currently tested development branch to the stable release branch. Merge only after CI and in-game validation succeed."
+            --title "Promote dev to main" \
+            --body "Promote the currently tested development branch to the stable main branch. Merge only after CI and in-game validation succeed."

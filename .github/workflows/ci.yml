@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [dev, release]
+    branches: [dev, main]
   pull_request:
-    branches: [dev, release]
+    branches: [dev, main]
 
 permissions:
   contents: read
@@ -26,7 +26,7 @@ jobs:
         shell: pwsh
         run: |
           $dalamudUrl = "https://goatcorp.github.io/dalamud-distrib/latest.zip"
-          $dalamudDir = "$env:AppData\XIVLauncher\addon\Hooks\dev"
+          $dalamudDir = "$env:AppData\\XIVLauncher\\addon\\Hooks\\dev"
           New-Item -ItemType Directory -Force -Path $dalamudDir | Out-Null
           Invoke-WebRequest -Uri $dalamudUrl -OutFile dalamud.zip
           Expand-Archive -Path dalamud.zip -DestinationPath $dalamudDir -Force

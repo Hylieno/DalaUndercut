@@ -1,0 +1,35 @@
+name: Remove obsolete release branch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/remove-obsolete-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.repository == 'Hylieno/DalaUndercut'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Delete obsolete release branch
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            try {
+              await github.rest.git.deleteRef({
+                ...context.repo,
+                ref: 'heads/release'
+              });
+              core.info('Deleted obsolete release branch.');
+            } catch (error) {
+              if (error.status === 422) {
+                core.info('The release branch no longer exists.');
+                return;
+              }
+              throw error;
+            }
