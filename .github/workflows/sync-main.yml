@@ -1,0 +1,68 @@
+name: Sync main with release
+
+on:
+  push:
+    branches: [release]
+  workflow_dispatch:
+  # Recovery for missed events, manual drift, and GITHUB_TOKEN pushes,
+  # which do not trigger another push workflow. GitHub may delay schedules.
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-main-with-release
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'Hylieno/DalaUndercut'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # No checkout or execution of repository code is needed.
+      # main is a mirror: its independent commits are intentionally replaced.
+      # Branch rules must permit this token to update main, including rewinds.
+      - name: Align and verify main
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          retries: 3
+          script: |
+            const repo = context.repo;
+            const read = async branch => {
+              const { data } = await github.rest.git.getRef({
+                ...repo, ref: `heads/${branch}`
+              });
+              if (data.object.type !== 'commit') {
+                throw new Error(`${branch} does not point to a commit`);
+              }
+              return data.object.sha;
+            };
+            
+            // Read live refs: a queued run must never restore its old event SHA.
+            // Only main is written; release is always the source of truth.
+            for (let attempt = 1; attempt <= 5; attempt++) {
+              const release = await read('release');
+              const main = await read('main');
+              if (main !== release) {
+                core.info(`Aligning main from ${main} to release ${release}`);
+                await github.rest.git.updateRef({
+                  ...repo, ref: 'heads/main', sha: release, force: true
+                });
+              }
+            
+              const actualMain = await read('main');
+              const latestRelease = await read('release');
+              if (actualMain === latestRelease) {
+                core.info(`Verified main = release = ${latestRelease}`);
+                await core.summary
+                  .addHeading('Branch synchronization verified')
+                  .addRaw(`main = release = ${latestRelease}`)
+                  .write();
+                return;
+              }
+              core.warning(`Refs changed during attempt ${attempt}; retrying with current release.`);
+            }
+            throw new Error('main and release did not converge after 5 attempts; rerun this workflow.');
